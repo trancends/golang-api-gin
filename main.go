@@ -8,14 +8,12 @@ import (
 )
 
 type responseSucces struct {
-	Status  string      `json:"status"`
 	Message string      `json:"message"`
-	Data    interface{} `json:"Data,omitempty"`
+	Data    interface{} `json:"data,omitempty"`
 }
 
 type responseError struct {
-	Status  string `json:"status"`
-	Message string `json:"message"`
+	Error string `json:"error"`
 }
 
 type Task struct {
@@ -32,13 +30,20 @@ func main() {
 
 	route.GET("/", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{
-			"message": "TODO APP",
+			"message": "This is TODO APP",
 		})
 	})
 	route.GET("/task", getTask)
 	route.GET("/task/:id", getTaskById)
+	route.POST("/task/add", addTask)
+	route.PUT("/task/:id", updateTask)
+	route.DELETE("/task/delete/all", deleteAllTask)
+	route.DELETE("/task/delete/:id", deleteTask)
 
-	route.Run(":8080")
+	err := route.Run(":8080")
+	if err != nil {
+		panic(err)
+	}
 }
 
 func getTaskById(c *gin.Context) {
@@ -46,7 +51,7 @@ func getTaskById(c *gin.Context) {
 	taskId, err := strconv.Atoi(id)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, responseError{
-			Message: "id needs to be number",
+			Error: "id needs to be number",
 		})
 		return
 	}
@@ -61,7 +66,7 @@ func getTaskById(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusNotFound, responseError{
-		Message: "task not found",
+		Error: "task not found",
 	})
 }
 
@@ -74,10 +79,10 @@ func getTask(c *gin.Context) {
 
 func addTask(c *gin.Context) {
 	var newTask Task
-	err := c.ShouldBind(newTask)
+	err := c.ShouldBind(&newTask)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, responseError{
-			Message: "id needs to be a number",
+			Error: "id needs to be a number",
 		})
 		return
 	}
@@ -85,7 +90,7 @@ func addTask(c *gin.Context) {
 	for _, task := range tasks {
 		if task.ID == newTask.ID {
 			c.JSON(http.StatusBadRequest, responseError{
-				Message: "Id already exist",
+				Error: "id already exist",
 			})
 			return
 		}
@@ -94,7 +99,6 @@ func addTask(c *gin.Context) {
 	tasks = append(tasks, newTask)
 
 	c.JSON(http.StatusOK, responseSucces{
-		Status:  "OK",
 		Message: "Sucesfully Added New Task",
 		Data:    tasks,
 	})
@@ -104,7 +108,6 @@ func deleteAllTask(c *gin.Context) {
 	tasks = []Task{}
 
 	c.JSON(http.StatusOK, responseSucces{
-		Status:  "Succes",
 		Message: "All Task Deleted",
 		Data:    tasks,
 	})
@@ -115,7 +118,7 @@ func deleteTask(c *gin.Context) {
 	taskId, err := strconv.Atoi(id)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, responseError{
-			Message: "id needs to be a number",
+			Error: "id needs to be a number",
 		})
 		return
 	}
@@ -131,7 +134,7 @@ func deleteTask(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusNotFound, responseError{
-		Message: "Task Not Found",
+		Error: "Task Not Found",
 	})
 }
 
@@ -140,12 +143,13 @@ func updateTask(c *gin.Context) {
 	taskId, err := strconv.Atoi(id)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, responseError{
-			Message: "id needs to be a number",
+			Error: "id needs to be a number",
 		})
 		return
 	}
 
 	var newTask Task
+	c.ShouldBind(&newTask)
 
 	for index, task := range tasks {
 		if task.ID == taskId {
