@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type responseSucces struct {
+type responseSuccess struct {
 	Message string      `json:"message"`
 	Data    interface{} `json:"data,omitempty"`
 }
@@ -25,6 +25,26 @@ type Task struct {
 
 var tasks []Task
 
+var (
+	username string = "enigma"
+	password string = "rahasia"
+)
+
+func BasicAuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		user, pass, ok := c.Request.BasicAuth()
+
+		if !ok || user != username || pass != password {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, responseError{
+				Error: "Unauthorized",
+			})
+			return
+		}
+
+		c.Next()
+	}
+}
+
 func main() {
 	route := gin.Default()
 
@@ -33,9 +53,12 @@ func main() {
 			"message": "This is TODO APP",
 		})
 	})
+
 	route.GET("/task", getTask)
 	route.GET("/task/:id", getTaskById)
 	route.POST("/task/add", addTask)
+
+	route.Use(BasicAuthMiddleware())
 	route.PUT("/task/:id", updateTask)
 	route.DELETE("/task/delete/all", deleteAllTask)
 	route.DELETE("/task/delete/:id", deleteTask)
@@ -57,8 +80,8 @@ func getTaskById(c *gin.Context) {
 	}
 	for _, task := range tasks {
 		if task.ID == taskId {
-			c.JSON(http.StatusOK, responseSucces{
-				Message: "Sucesfully get data",
+			c.JSON(http.StatusOK, responseSuccess{
+				Message: "Successfully get data",
 				Data:    task,
 			})
 			return
@@ -71,7 +94,7 @@ func getTaskById(c *gin.Context) {
 }
 
 func getTask(c *gin.Context) {
-	c.JSON(http.StatusOK, responseSucces{
+	c.JSON(http.StatusOK, responseSuccess{
 		Message: "success",
 		Data:    tasks,
 	})
@@ -98,7 +121,7 @@ func addTask(c *gin.Context) {
 
 	tasks = append(tasks, newTask)
 
-	c.JSON(http.StatusOK, responseSucces{
+	c.JSON(http.StatusOK, responseSuccess{
 		Message: "Sucesfully Added New Task",
 		Data:    tasks,
 	})
@@ -107,7 +130,7 @@ func addTask(c *gin.Context) {
 func deleteAllTask(c *gin.Context) {
 	tasks = []Task{}
 
-	c.JSON(http.StatusOK, responseSucces{
+	c.JSON(http.StatusOK, responseSuccess{
 		Message: "All Task Deleted",
 		Data:    tasks,
 	})
@@ -126,7 +149,7 @@ func deleteTask(c *gin.Context) {
 	for index, task := range tasks {
 		if task.ID == taskId {
 			tasks = append(tasks[:index], tasks[index+1:]...)
-			c.JSON(http.StatusOK, responseSucces{
+			c.JSON(http.StatusOK, responseSuccess{
 				Message: "Task Deleted",
 			})
 			return
@@ -156,7 +179,7 @@ func updateTask(c *gin.Context) {
 			tasks[index].Title = newTask.Title
 			tasks[index].Description = newTask.Description
 			tasks[index].Status = newTask.Status
-			c.JSON(http.StatusOK, responseSucces{
+			c.JSON(http.StatusOK, responseSuccess{
 				Message: "Task Updated",
 				Data:    task,
 			})
@@ -164,7 +187,7 @@ func updateTask(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusNotFound, responseSucces{
+	c.JSON(http.StatusNotFound, responseSuccess{
 		Message: "Task Not Found",
 	})
 }
