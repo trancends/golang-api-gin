@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -46,7 +45,7 @@ func getTaskById(c *gin.Context) {
 	id := c.Param("id")
 	taskId, err := strconv.Atoi(id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, responseError{
+		c.JSON(http.StatusBadRequest, responseError{
 			Message: "id needs to be number",
 		})
 		return
@@ -73,114 +72,95 @@ func getTask(c *gin.Context) {
 	})
 }
 
-func addTask(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
+func addTask(c *gin.Context) {
 	var newTask Task
-	err := json.NewDecoder(r.Body).Decode(&newTask)
+	err := c.ShouldBind(newTask)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(responseError{
-			Status:  "Error",
-			Message: "Failed to decode json",
+		c.JSON(http.StatusBadRequest, responseError{
+			Message: "id needs to be a number",
 		})
 		return
 	}
 
+	for _, task := range tasks {
+		if task.ID == newTask.ID {
+			c.JSON(http.StatusBadRequest, responseError{
+				Message: "Id already exist",
+			})
+			return
+		}
+	}
+
 	tasks = append(tasks, newTask)
 
-	w.Header().Set("Content-Type", "application/json")
-	if err = json.NewEncoder(w).Encode(responseSucces{
+	c.JSON(http.StatusOK, responseSucces{
 		Status:  "OK",
 		Message: "Sucesfully Added New Task",
 		Data:    tasks,
-	}); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	})
 }
 
-func deleteAllTask(w http.ResponseWriter, r *http.Request) {
+func deleteAllTask(c *gin.Context) {
 	tasks = []Task{}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(responseSucces{
+	c.JSON(http.StatusOK, responseSucces{
 		Status:  "Succes",
 		Message: "All Task Deleted",
 		Data:    tasks,
 	})
 }
 
-func deleteTask(w http.ResponseWriter, r *http.Request) {
-	var newTask Task
-	err := json.NewDecoder(r.Body).Decode(&newTask)
+func deleteTask(c *gin.Context) {
+	id := c.Param("id")
+	taskId, err := strconv.Atoi(id)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(responseError{
-			Status:  "Error",
-			Message: "Failed to decode json",
+		c.JSON(http.StatusBadRequest, responseError{
+			Message: "id needs to be a number",
 		})
 		return
 	}
 
 	for index, task := range tasks {
-		if task.ID == newTask.ID {
+		if task.ID == taskId {
 			tasks = append(tasks[:index], tasks[index+1:]...)
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(responseSucces{
-				Status:  "Succes",
+			c.JSON(http.StatusOK, responseSucces{
 				Message: "Task Deleted",
 			})
 			return
 		}
 	}
 
-	w.WriteHeader(http.StatusNotFound)
-	json.NewEncoder(w).Encode(responseError{
-		Status:  "error",
+	c.JSON(http.StatusNotFound, responseError{
 		Message: "Task Not Found",
 	})
 }
 
-func updateTask(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "PUT" {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(responseError{Message: "Metod Not Allowed", Status: "error"})
-		return
-	}
-
-	var newTask Task
-	err := json.NewDecoder(r.Body).Decode(&newTask)
+func updateTask(c *gin.Context) {
+	id := c.Param("id")
+	taskId, err := strconv.Atoi(id)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(responseError{
-			Status:  "Error",
-			Message: "Failed to decode json",
+		c.JSON(http.StatusBadRequest, responseError{
+			Message: "id needs to be a number",
 		})
 		return
 	}
 
+	var newTask Task
+
 	for index, task := range tasks {
-		if task.ID == newTask.ID {
+		if task.ID == taskId {
 			tasks[index].Title = newTask.Title
 			tasks[index].Description = newTask.Description
 			tasks[index].Status = newTask.Status
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(responseSucces{
-				Status:  "success",
+			c.JSON(http.StatusOK, responseSucces{
 				Message: "Task Updated",
-				Data:    tasks,
+				Data:    task,
 			})
 			return
 		}
 	}
 
-	w.WriteHeader(http.StatusNotFound)
-	json.NewEncoder(w).Encode(responseSucces{
-		Status:  "error",
+	c.JSON(http.StatusNotFound, responseSucces{
 		Message: "Task Not Found",
 	})
 }
