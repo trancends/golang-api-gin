@@ -54,11 +54,11 @@ func main() {
 		})
 	})
 
+	route.Use(BasicAuthMiddleware())
 	route.GET("/task", getTask)
 	route.GET("/task/:id", getTaskById)
 	route.POST("/task/add", addTask)
 
-	route.Use(BasicAuthMiddleware())
 	route.PUT("/task/:id", updateTask)
 	route.DELETE("/task/delete/all", deleteAllTask)
 	route.DELETE("/task/delete/:id", deleteTask)
